@@ -3,5 +3,6 @@
 #
 # FTN master thesis: Serbian (Cyrillic), author-date citations (APA-style, as in
 # the reference template), and the FTN master Word template for DOCX output.
-CSL := $(SHARED)/resources/apa.csl
+# Lokalna kopija APA stila: u listi literature ne prikazuje "(без датума)".
+CSL := apa-bez-datuma.csl
 DOCX_TEMPLATE := $(SHARED)/resources/ftn-master-thesis-template.docx
