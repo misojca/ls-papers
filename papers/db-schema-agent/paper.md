@@ -25,6 +25,14 @@ lang: sr
 mainfont: "DejaVu Serif"
 # Monospace font za kodne listinge — mora pokrivati ćirilicu.
 monofont: "DejaVu Sans Mono"
+# Format papira i margine po FTN шаблону (лево 2,5 cm због повезивања).
+papersize: a4
+geometry:
+  - left=2.5cm
+  - right=1.5cm
+  - top=1.5cm
+  - bottom=1.5cm
+  - includefoot
 bibliography: references.bib
 numbersections: true
 # pandoc-crossref lokalizacija (ćirilica): prefiksi za slike, tabele, sekcije.
@@ -429,23 +437,15 @@ AI агент, у контексту развоја софтвера, дефин
 
 Обрада захтева одвија се кроз **десет корака**. Агент најпре проверава тренутно стање миграционе историје и чита структуру базе из *information_schema*. Након тога одређује о каквој се промени ради и на основу тога генерише entity класу и одговарајућу Fluent API конфигурацију. Следећи корак је покретање *dotnet ef migrations add*, након чега агент проверава садржај генерисане миграције и њене Up() и Down() методе.
 
-Када је миграција припремљена, агент је примењује и врши round-trip проверу како би се утврдило да ли се промена може успешно применити и вратити. На крају генерише Mermaid ER дијаграм који приказује измену и припрема финални извештај о извршеној промени.
+Када је миграција припремљена, агент је примењује и врши round-trip проверу како би се утврдило да ли се промена може успешно применити и вратити. На крају генерише Mermaid ER дијаграм који приказује измену и припрема финални извештај о извршеној промени. Ток обраде захтева, укључујући baseline проверу и гранање према класи промене (одељак [-@sec:klasifikacija]), приказан је на слици [-@fig:workflow].
+
+![Ток обраде захтева у DB агенту](figures/db-agent-workflow.svg){#fig:workflow width=60%}
 
 На овај начин DB агент не служи само за генерисање миграције, већ повезује захтев, тренутно стање базе, промене у коду и документацију у један контролисан процес.
 
-Ток затворене петље између DB агента, сензора и Architecture агента је следећи:
+Ток затворене петље између DB агента, сензора и Architecture агента приказан је на слици [-@fig:petlja].
 
-```text
-DB агент мења базу
-        ↓
-Сензор детектује drift
-        ↓
-Програмер покреће Architecture агента (ручно)
-        ↓
-Architecture агент ажурира arc42
-        ↓
-Сензор потврђује 0 одступања
-```
+![Ток затворене петље између DB агента, сензора, програмера и Architecture агента](figures/closed-loop.svg){#fig:petlja width=90%}
 
 ## Класификациони систем промена {#sec:klasifikacija}
 
@@ -469,7 +469,9 @@ Architecture агент ажурира arc42
 
 ## Интеграција у постојећи вишеагентски харнес {#sec:integracija}
 
-DB агент није изолован алат него шести члан постојећег вишеагентског харнеса. Разумевање начина на који се уклапа у шири систем важно је за процену практичне употребљивости решења.
+DB агент није изолован алат него шести члан постојећег вишеагентског харнеса. Разумевање начина на који се уклапа у шири систем важно је за процену практичне употребљивости решења. Агенти харнеса, артефакти које производе и улога програмера приказани су на слици [-@fig:harnes].
+
+![Компоненте вишеагентског харнеса и артефакти које агенти производе](figures/harness-components.svg){#fig:harnes width=100%}
 
 ### Git агент {#sec:git-agent}
 
@@ -633,9 +635,13 @@ DB агент конфигурисан је кроз два фајла у дир
 
 Сценарио 4 - Нова шема обухватила је додавање PostgreSQL шеме loyalty са табелом loyaltyaccount и страном кључем који повезује ову табелу са sales.customer. Агент је генерисао EnsureSchema(), CreateTable() са одговарајућим страним кључем, индекс на колони која садржи страни кључ и unique constraint.
 
-Сценарио 5 - Splitting табеле подразумевао је раздвајање табеле person.address на две табеле уз истовремену миграцију постојећих података. Нова табела person.addressdetail преузела је просторне податке (колона spatiallocation), а између табела је успостављена one-to-one релација. Први покушај није оставио миграцију у репозиторијуму, већ само entity класу и конфигурацију AddressDetail, па је сценарио поновљен. У поновљеном покушају агент је генерисао две миграције: expand миграција (*SplitAddressToAddressDetail_ExpandPhase*) креира нову табелу и преноси 19.614 редова, а contract миграција (*SplitAddressToAddressDetail_ContractPhase*) уклања колону spatiallocation из табеле person.address. Агент је притом уочио да је из првог покушаја на AddressDetail остала погрешна ознака ExcludeFromMigrations(), због које EF Core генерише празну миграцију, и открио зависни поглед pe.a који користи колону која се уклања. Поглед је у contract миграцији обрисан и поново креиран, без употребе CASCADE. Потрошња DB агента износила је 6,57 Kiro credits, а сесија је трајала 40 минута и 54 секунде.
+Сценарио 5 - Splitting табеле подразумевао је раздвајање табеле person.address на две табеле уз истовремену миграцију постојећих података. Нова табела person.addressdetail преузела је просторне податке (колона spatiallocation), а између табела је успостављена one-to-one релација. Први покушај није оставио миграцију у репозиторијуму, већ само entity класу и конфигурацију AddressDetail, па је сценарио поновљен. У поновљеном покушају агент је генерисао две миграције: expand миграција (*SplitAddressToAddressDetail_ExpandPhase*) креира нову табелу и преноси 19.614 редова, а contract миграција (*SplitAddressToAddressDetail_ContractPhase*) уклања колону spatiallocation из табеле person.address. Агент је притом уочио да је из првог покушаја на AddressDetail остала погрешна ознака ExcludeFromMigrations(), због које EF Core генерише празну миграцију, и открио зависни поглед pe.a који користи колону која се уклања. Поглед је у contract миграцији обрисан и поново креиран, без употребе CASCADE. Потрошња DB агента износила је 6,57 Kiro credits, а сесија је трајала 40 минута и 54 секунде. Стање шеме пре и после измене приказано је на слици [-@fig:split].
 
-Сценарио 6 - Merge табела подразумевао је денормализацију табеле humanresources.employee додавањем pay колона које су претходно биле смештене у employeepayhistory. У првом покушају pay колоне нису додате миграцијом, већ их је на базу директно применио TDD агент командом ALTER TABLE (одељак [-@sec:api]), а пратећи ER дијаграм остао је празан. Зато су колоне уклоњене, seed dump је поново генерисан и сценарио је поновљен из тог полазног стања. У поновљеном покушају expand миграција (*AlterEmployee_AddPayColumns_ExpandPhase*) додаје колоне currentpayrate, currentpayfrequency и paychangedate и попуњава их најновијим записом из employeepayhistory, који се за сваког запосленог одређује подупитом са MAX(ratechangedate). Contract миграција (*AlterEmployee_AddPayColumns_ContractPhase*) поставља ограничење NOT NULL на нове колоне. Пошто је табела employee означена са ExcludeFromMigrations(), EF Core је прво генерисао празну миграцију; агент је то сам уочио, па су миграције, пратеће *Designer* датотеке и snapshot модела написани ручно. Агент је пре измене проверио шест зависних погледа. Табела employeepayhistory није уклоњена нити на други начин измењена, јер чува историјске податке. Потрошња DB агента износила је 8,98 Kiro credits, а сесија је трајала 14 минута и 2 секунде.
+![Шема табеле person.address пре и после раздвајања (Сценарио 5); звездица означава колону NOT NULL](figures/split-address.svg){#fig:split width=100%}
+
+Сценарио 6 - Merge табела подразумевао је денормализацију табеле humanresources.employee додавањем pay колона које су претходно биле смештене у employeepayhistory. У првом покушају pay колоне нису додате миграцијом, већ их је на базу директно применио TDD агент командом ALTER TABLE (одељак [-@sec:api]), а пратећи ER дијаграм остао је празан. Зато су колоне уклоњене, seed dump је поново генерисан и сценарио је поновљен из тог полазног стања. У поновљеном покушају expand миграција (*AlterEmployee_AddPayColumns_ExpandPhase*) додаје колоне currentpayrate, currentpayfrequency и paychangedate и попуњава их најновијим записом из employeepayhistory, који се за сваког запосленог одређује подупитом са MAX(ratechangedate). Contract миграција (*AlterEmployee_AddPayColumns_ContractPhase*) поставља ограничење NOT NULL на нове колоне. Пошто је табела employee означена са ExcludeFromMigrations(), EF Core је прво генерисао празну миграцију; агент је то сам уочио, па су миграције, пратеће *Designer* датотеке и snapshot модела написани ручно. Агент је пре измене проверио шест зависних погледа. Табела employeepayhistory није уклоњена нити на други начин измењена, јер чува историјске податке. Потрошња DB агента износила је 8,98 Kiro credits, а сесија је трајала 14 минута и 2 секунде. Стање шеме пре и после измене приказано је на слици [-@fig:merge].
+
+![Шема табела humanresources.employee и employeepayhistory пре и после спајања (Сценарио 6); звездица означава колону NOT NULL](figures/merge-employee-pay.svg){#fig:merge width=100%}
 
 Сценарио 7 - Креирање нове табеле purchasing.purchasereturn. Потрошња DB агента износила је 2,13 Kiro credits, а обрада захтева трајала је 4 минута и 43 секунде.
 
@@ -768,10 +774,10 @@ GitHub Actions workflow у фајлу *.github/workflows/ci.yml* аутомат�
 
 ## Резултати schema drift сензора {#sec:rez-drift}
 
-Сензор за детекцију schema drift-а тестиран је кроз пет независних акција у оквиру демонстрације затворене петље и кроз поновљене сценарије 5 и 6. Свака акција представља промену коју је DB агент извршио над базом, без истовременог ажурирања arc42 документације - чиме је намерно изазвано стање drift-а. У Сценарију 6 одступање је постојало већ у полазном стању: arc42 документација садржала је pay колоне које су из базе уклоњене пре понављања сценарија. Акције додавања колоне discount_percentage, додавања табеле purchaserequest и брисања колоне notes изведене су у оквиру засебне демонстрације затворене петље и нису део осам евалуационих сценарија; одговарајуће миграције (*AddDiscountPercentageToSpecialOffer*, *AddPurchaseRequest*, *DropNotesFromPurchaseRequest*) налазе се у пратећем репозиторијуму, али нису урачунате у табелу [-@tbl:scenariji].
+Сензор за детекцију schema drift-а тестиран је кроз пет независних акција у оквиру демонстрације затворене петље и кроз поновљене сценарије 5 и 6. Свака акција представља промену коју је DB агент извршио над базом, без истовременог ажурирања arc42 документације - чиме је намерно изазвано стање drift-а. У Сценарију 6 одступање је постојало већ у полазном стању: arc42 документација садржала је pay колоне које су из базе уклоњене пре понављања сценарија. Акције додавања колоне discount_percentage, додавања табеле purchaserequest и брисања колоне notes изведене су у оквиру засебне демонстрације затворене петље и нису део осам евалуационих сценарија; одговарајуће миграције (*AddDiscountPercentage\allowbreak{}ToSpecialOffer*, *AddPurchaseRequest*, *DropNotesFrom\allowbreak{}PurchaseRequest*) налазе се у пратећем репозиторијуму, али нису урачунате у табелу [-@tbl:scenariji].
 
 | Акција | Детектовано одступање | Време Architecture агента |
-|--------|-----------------------|--------------------------:|
+|------------------------------------|----------------------------|---------------:|
 | Додавање колоне discount_percentage | 1 COLUMN DRIFT | 41 с |
 | Додавање табеле purchaserequest | 1 TABLE DRIFT | 38 с |
 | Брисање колоне notes | 1 COLUMN MISSING | 31 с |
@@ -788,18 +794,41 @@ GitHub Actions workflow у фајлу *.github/workflows/ci.yml* аутомат�
 
 Интеграциони тестови верификују да генерисана шема функционише исправно у апликацијском коду. Тестови користе *WebApplicationFactory* за покретање целог ASP.NET Core pipeline-а у меморији, уз конекцију на стварну *AdventureWorks* базу.
 
-| Тест | Шта се проверава |
-|------|------------------|
-| CanConnectToDatabase | EF Core успешно успоставља конекцију са базом |
-| CanReadCustomersFromSalesSchema | Табела sales.customer доступна и садржи редове |
-| Given_ProductsExist_When_GetAllProducts_Then_ReturnsOkWithNonEmptyList | GET /api/products враћа HTTP 200 и непразну листу |
-| Given_ProductsExist_When_GetAllProducts_Then_EachProductHasRequiredFields | Сваки производ садржи productId, name, productNumber и listPrice |
-| Given_EmployeesExist_When_GetAllEmployees_Then_ReturnsOkWithNonEmptyList | GET /api/employees враћа HTTP 200 и непразну листу |
-| Given_EmployeesExist_When_GetAllEmployees_Then_EachEmployeeHasRequiredFields | Сваки запослени садржи businessEntityId, jobTitle и hireDate |
-| Given_EmployeesExist_When_GetAllEmployees_Then_PayFieldsAreIncluded | Барем један запослени садржи попуњене pay колоне из Сценарија 6 |
-| Given_LoyaltyAccountExists_When_GetByCustomerId_Then_ReturnsPointsBalance | GET /api/loyalty/42 враћа HTTP 200 са пољем pointsBalance |
++----------------------------------------+----------------------------------+
+| Тест                                   | Шта се проверава                 |
++========================================+==================================+
+| CanConnectToDatabase                   | EF Core успешно успоставља       |
+|                                        | конекцију са базом               |
++----------------------------------------+----------------------------------+
+| CanReadCustomersFromSalesSchema        | Табела sales.customer доступна и |
+|                                        | садржи редове                    |
++----------------------------------------+----------------------------------+
+| | Given\_ProductsExist\_               | GET /api/products враћа HTTP 200 |
+| | When\_GetAllProducts\_               | и непразну листу                 |
+| | Then\_ReturnsOkWithNonEmptyList      |                                  |
++----------------------------------------+----------------------------------+
+| | Given\_ProductsExist\_               | Сваки производ садржи productId, |
+| | When\_GetAllProducts\_               | name, productNumber и listPrice  |
+| | Then\_EachProductHasRequiredFields   |                                  |
++----------------------------------------+----------------------------------+
+| | Given\_EmployeesExist\_              | GET /api/employees враћа HTTP    |
+| | When\_GetAllEmployees\_              | 200 и непразну листу             |
+| | Then\_ReturnsOkWithNonEmptyList      |                                  |
++----------------------------------------+----------------------------------+
+| | Given\_EmployeesExist\_              | Сваки запослени садржи           |
+| | When\_GetAllEmployees\_              | businessEntityId, jobTitle и     |
+| | Then\_EachEmployeeHasRequiredFields  | hireDate                         |
++----------------------------------------+----------------------------------+
+| | Given\_EmployeesExist\_              | Барем један запослени садржи     |
+| | When\_GetAllEmployees\_              | попуњене pay колоне из Сценарија |
+| | Then\_PayFieldsAreIncluded           | 6                                |
++----------------------------------------+----------------------------------+
+| | Given\_LoyaltyAccountExists\_        | GET /api/loyalty/42 враћа HTTP   |
+| | When\_GetByCustomerId\_              | 200 са пољем pointsBalance       |
+| | Then\_ReturnsPointsBalance           |                                  |
++----------------------------------------+----------------------------------+
 
-: Интеграциони тестови {#tbl:testovi}
+: Интеграциони тестови {#tbl:testovi .row-rules}
 
 ## Процена трајања ручне имплементације {#sec:poredjenje}
 
@@ -848,7 +877,9 @@ GitHub Actions workflow у фајлу *.github/workflows/ci.yml* аутомат�
 
 ### Human-in-the-loop оркестрација {#sec:hitl}
 
-Током демонстрације feedback loop-а, TDD агент је експлицитно навео да не може директно да комуницира са DB агентом. Структурисани извештај о грешци програмер је ручно проследио од TDD агента до DB агента. Овај налаз је важан за прецизно описивање система: реч је о human-in-the-loop оркестрацији, а не о потпуно аутономној затвореној петљи. Агенти не комуницирају директно, већ програмер има улогу оркестратора који преузима излаз једног агента и прослеђује га као улаз следећем.
+Током демонстрације feedback loop-а, TDD агент је експлицитно навео да не може директно да комуницира са DB агентом. Структурисани извештај о грешци програмер је ручно проследио од TDD агента до DB агента. Овај налаз је важан за прецизно описивање система: реч је о human-in-the-loop оркестрацији, а не о потпуно аутономној затвореној петљи. Агенти не комуницирају директно, већ програмер има улогу оркестратора који преузима излаз једног агента и прослеђује га као улаз следећем. Овај ток, заједно са ограничењем од три итерације из системског промпта DB агента, приказан је на слици [-@fig:hitl].
+
+![Human-in-the-loop ток исправке грешке шеме између TDD/BDD агента, програмера и DB агента](figures/hitl-sequence.svg){#fig:hitl width=100%}
 
 # Закључак {#sec:zakljucak}
 

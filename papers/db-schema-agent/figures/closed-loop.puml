@@ -1,0 +1,17 @@
+@startuml
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+
+|DB агент|
+start
+:Мења базу;
+|Сензор|
+:Детектује drift;
+|Програмер|
+:Ручно покреће\nArchitecture агента;
+|Architecture агент|
+:Ажурира arc42;
+|Сензор|
+:Потврђује 0 одступања;
+stop
+@enduml

@@ -1,0 +1,38 @@
+@startuml
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+skinparam componentStyle rectangle
+left to right direction
+
+actor "Програмер (оркестратор)" as dev
+
+package "Вишеагентски харнес (Kiro CLI)" as harness {
+  [Requirements агент] as req
+  [Architecture агент] as arch
+  [DB агент] as db
+  [TDD/BDD агент] as tdd
+  [CI/CD агент] as cicd
+  [Git агент] as git
+  [Schema drift сензор] as sensor
+}
+
+dev --> harness : покреће агенте и\nпрослеђује резултате
+
+folder "arc42 документација" as arc42
+folder "Корисничке приче" as stories
+folder "Domain / Infrastructure\n(entity, Fluent API, миграције)" as dbcode
+folder "Тестови, Application, Api" as appcode
+database "PostgreSQL\nAdventureWorks" as pg
+file "CI pipeline\n(ci.yml, Dockerfile)" as ci
+cloud "GitHub\n(Issues, гране, PR)" as gh
+
+arch --> arc42 : ажурира
+req --> stories : креира
+db --> dbcode : генерише
+db --> pg : примењује миграције
+tdd --> appcode : имплементира
+cicd --> ci : генерише
+git --> gh : gh CLI
+sensor ..> arc42 : пореди
+sensor ..> pg : пореди
+@enduml

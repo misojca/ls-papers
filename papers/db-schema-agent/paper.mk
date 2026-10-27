@@ -6,3 +6,5 @@
 # Lokalna kopija APA stila: u listi literature ne prikazuje "(без датума)".
 CSL := apa-bez-datuma.csl
 DOCX_TEMPLATE := $(SHARED)/resources/ftn-master-thesis-template.docx
+# Lua filter: horizontalne linije izmedju redova tabela oznacenih sa .row-rules (samo PDF).
+PANDOC_EXTRA := --lua-filter=row-rules.lua

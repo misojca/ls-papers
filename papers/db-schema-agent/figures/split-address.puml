@@ -1,0 +1,44 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+
+package "Пре" {
+  entity "person.address" as a0 {
+    * addressid : integer <<PK>>
+    --
+    * addressline1 : varchar
+    addressline2 : varchar
+    * city : varchar
+    * stateprovinceid : integer <<FK>>
+    * postalcode : varchar
+    spatiallocation : bytea
+    * rowguid : uuid
+    * modifieddate : timestamp
+  }
+}
+
+package "После (expand + contract)" {
+  entity "person.address" as a1 {
+    * addressid : integer <<PK>>
+    --
+    * addressline1 : varchar
+    addressline2 : varchar
+    * city : varchar
+    * stateprovinceid : integer <<FK>>
+    * postalcode : varchar
+    * rowguid : uuid
+    * modifieddate : timestamp
+  }
+  entity "person.addressdetail" as d1 {
+    * addressid : integer <<PK, FK>>
+    --
+    spatiallocation : bytea
+    * modifieddate : timestamp
+  }
+  a1 ||--|| d1
+}
+
+a0 -[hidden]right- a1
+@enduml

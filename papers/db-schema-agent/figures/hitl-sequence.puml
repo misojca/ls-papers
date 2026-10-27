@@ -1,0 +1,30 @@
+@startuml
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+
+participant "TDD/BDD агент" as tdd
+actor "Програмер" as dev
+participant "DB агент" as db
+database "PostgreSQL" as pg
+
+tdd -> pg : покреће интеграциони тест
+pg --> tdd : грешка шеме (нпр. column does not exist)
+tdd -> dev : структурисани извештај\n(назив теста, порука, stack trace)
+note right of dev : Агенти не комуницирају\nдиректно — програмер\nручно прослеђује извештај
+dev -> db : прослеђује извештај
+
+loop највише 3 итерације
+  db -> db : класификација грешке и\nкорекциона миграција
+  db -> pg : round-trip тест\n(apply → rollback → re-apply)
+  db -> dev : извештај о исправци
+  dev -> tdd : поновно покретање теста
+  tdd -> pg : интеграциони тест
+  pg --> tdd : резултат
+end
+
+alt тест пролази
+  tdd -> dev : GREEN
+else после 3 итерације тест и даље пада
+  db -> dev : заустављање и пуна дијагностика\n(препорука за ручну интервенцију)
+end
+@enduml

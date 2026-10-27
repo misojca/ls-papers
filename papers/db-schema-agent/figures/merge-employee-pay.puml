@@ -1,0 +1,71 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+
+package "Пре" {
+  entity "humanresources.employee" as e0 {
+    * businessentityid : integer <<PK>>
+    --
+    * nationalidnumber : varchar
+    * loginid : varchar
+    * jobtitle : varchar
+    * birthdate : date
+    * maritalstatus : char
+    * gender : char
+    * hiredate : date
+    * salariedflag : boolean
+    * vacationhours : smallint
+    * sickleavehours : smallint
+    * currentflag : boolean
+    * rowguid : uuid
+    * modifieddate : timestamp
+    organizationnode : varchar
+  }
+  entity "humanresources.employeepayhistory" as h0 {
+    * businessentityid : integer <<PK, FK>>
+    * ratechangedate : timestamp <<PK>>
+    --
+    * rate : numeric
+    * payfrequency : smallint
+    * modifieddate : timestamp
+  }
+  e0 ||--o{ h0
+}
+
+package "После (expand + contract)" {
+  entity "humanresources.employee" as e1 {
+    * businessentityid : integer <<PK>>
+    --
+    * nationalidnumber : varchar
+    * loginid : varchar
+    * jobtitle : varchar
+    * birthdate : date
+    * maritalstatus : char
+    * gender : char
+    * hiredate : date
+    * salariedflag : boolean
+    * vacationhours : smallint
+    * sickleavehours : smallint
+    * currentflag : boolean
+    * rowguid : uuid
+    * modifieddate : timestamp
+    organizationnode : varchar
+    * currentpayrate : numeric
+    * currentpayfrequency : smallint
+    * paychangedate : timestamp
+  }
+  entity "humanresources.employeepayhistory" as h1 {
+    * businessentityid : integer <<PK, FK>>
+    * ratechangedate : timestamp <<PK>>
+    --
+    * rate : numeric
+    * payfrequency : smallint
+    * modifieddate : timestamp
+  }
+  e1 ||--o{ h1
+}
+
+e0 -[hidden]right- e1
+@enduml

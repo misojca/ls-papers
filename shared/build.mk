@@ -28,13 +28,17 @@ CSL ?= $(SHARED)/resources/ieee.csl
 DOCX_TEMPLATE ?= $(SHARED)/resources/template.docx
 ODT_TEMPLATE ?= $(SHARED)/resources/template.odt
 
+# Extra pandoc flags a paper can add in its paper.mk (e.g. a Lua filter).
+PANDOC_EXTRA ?=
+
 # Common pandoc flags (crossref for figures/tables/eqs, citeproc for citations)
 PANDOC_COMMON := \
 	--filter pandoc-crossref \
 	--citeproc \
 	--csl=$(CSL) \
 	--from=$(FROM) \
-	--variable urlcolor=blue
+	--variable urlcolor=blue \
+	$(PANDOC_EXTRA)
 
 .PHONY: all pdf docx odt clean
 

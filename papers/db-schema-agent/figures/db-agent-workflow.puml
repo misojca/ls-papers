@@ -1,0 +1,32 @@
+@startuml
+skinparam defaultFontName "DejaVu Sans"
+skinparam shadowing false
+
+start
+:Захтев за измену шеме\n(природни језик);
+:Читање arc42 документације;
+:Читање шеме базе\n(information_schema);
+:Читање историје миграција\n(__ef_migrations_history);
+if (Историја празна, а DbContext\nмапира постојеће табеле?) then (да)
+  :Baseline: ExcludeFromMigrations()\nза постојеће ентитете;
+else (не)
+endif
+:Класификација промене;
+if (Класа промене?) then (Destructive)
+  :Одбијање уз образложење\nи предлог безбедне алтернативе;
+  stop
+elseif () then (Risky)
+  :Expand-contract\n(две миграције);
+else (Safe)
+  :Једна миграција;
+endif
+:Генерисање entity класе (Domain);
+:Генерисање Fluent API конфигурације\n(Infrastructure);
+:dotnet ef migrations add;
+:Провера миграције\n(без CREATE TABLE за постојеће табеле);
+:Round-trip тест\napply → rollback → re-apply;
+:Генерисање ER дијаграма;
+:Извештај програмеру;
+:Чекање одобрења за следећи захтев;
+stop
+@enduml
